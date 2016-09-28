@@ -22,7 +22,7 @@ static dumpMeNot(fd, ea) {
 		// If the current address is function process it
 //		if (GetFunctionFlags(func) != -1) {
 			sz = FindFuncEnd(func) - func;
-			fprintf(fd, "af+ 0x%08lx %d %s\n", func, sz, GetFunctionName(func));
+			fprintf(fd, "afr %s 0x%08lx\n", GetFunctionName(func), func);
 
 			comment = GetFunctionCmt(func, 0);
 			if (comment != "")
@@ -38,7 +38,8 @@ static dumpMeNot(fd, ea) {
 //		}
 	}
 
-	for (func=ea; func != BADADDR && func < SegEnd(ea); func=func+1) {
+	func=ea;
+	while (func != BADADDR && func < SegEnd(ea)) {
 		comment = CommentEx(func, 0);
 		if (comment != "")
 			fprintf(fd, "CC %s@0x%08x\n", comment, func);
@@ -48,6 +49,10 @@ static dumpMeNot(fd, ea) {
 		comment = GetEnumCmt(func, 0);
 		if (comment != "")
 			fprintf(fd, "CC %s@0x%08x\n", comment, func);
+		comment = RptCmt(func);
+		if (comment != "")
+			fprintf(fd, "CC %s@0x%08x\n", comment, func);
+		func = func + ItemSize(func);
 	}
 }
 

@@ -1,5 +1,4 @@
-radare2ida
-==========
+# radare2ida
 
 This repository contains a collection of documents, scripts
 and utilities that will allow you to use IDA and R2, converting
@@ -18,3 +17,8 @@ In progress:
   * Base converter
   * ROP gadget search
   * ...
+
+## ida2r2
+
+This requires the [python-idb](https://github.com/williballenthin/python-idb) installed
+and available for python imports.

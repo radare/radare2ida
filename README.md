@@ -20,5 +20,6 @@ In progress:
 
 ## ida2r2
 
-This requires the [python-idb](https://github.com/williballenthin/python-idb) installed
-and available for python imports.
+**Note:** This requires the [python-idb](https://github.com/williballenthin/python-idb) installed
+and available for python imports. It is recommended to use the latest version of
+ `python-idb` by cloning the repository and installing it using `python setup.py install`.

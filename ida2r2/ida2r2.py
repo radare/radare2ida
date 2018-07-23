@@ -1,9 +1,149 @@
 #!/usr/bin/env python
 
-# radare - LGPL - Copyright 2013 - xvilka
+""" Export IDB from IDA into a radare2 script
 
-import re
+$ idb2r2.py -h
+
+usage: idb2r2.py [-h] (-idb IDB_FILE | -idc IDC_FILE) -o OUT_FILE [-nc | -nf]
+
+Export IDB or IDC from IDA into a radare2 initialization script
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -idb IDB_FILE, --IDBFile IDB_FILE
+                        Path to the IDB file
+  -idc IDC_FILE, --IDCFile IDC_FILE
+                        Path to the IDC file
+  -o OUT_FILE, --OutputFile OUT_FILE
+                        Export to a specified file path
+  -nc, --no-comments    Don't convert comments
+  -nf, --no-functions   Don't convert functions
+
+"""
+
+__author__ = "Itay Cohen (@megabeets_), Maxime Morin (@maijin), Sergi Alvarez (@pancake)"
+
+
+import argparse
+import idb
 import sys
+import re
+import base64
+
+
+def get_args():
+    ''' Handle arguments using argparse
+    '''
+
+    arg_parser = argparse.ArgumentParser(
+        description="Export IDB or IDC from IDA into a radare2 initialization script")
+
+    arg_group_files = arg_parser.add_mutually_exclusive_group(required=True)
+
+    arg_group_files.add_argument("-idb", "--IDBFile",
+                            action="store",
+                            dest="idb_file",
+                            help="Path to the IDB file")
+
+    arg_group_files.add_argument("-idc", "--IDCFile",
+                            action="store",
+                            dest="idc_file",
+                            help="Path to the IDC file")
+
+    arg_parser.add_argument("-o", "--OutputFile",
+                            action="store",
+                            dest="out_file",
+                            required=True,
+                            help="Export to a specified file path")
+
+    arg_group = arg_parser.add_mutually_exclusive_group()
+
+    arg_group.add_argument("-nc", "--no-comments",
+                           dest="is_comments",
+                           action="store_false",
+                           help="Don't convert comments")
+
+    arg_group.add_argument("-nf", "--no-functions",
+                           dest="is_functions",
+                           action="store_false",
+                           help="Don't convert functions")
+
+    arg_parser.set_defaults(is_comments=True, is_functions=True)
+
+    args = arg_parser.parse_args()
+    return args
+
+
+
+###
+# IDB Parsing
+#
+
+def idb2r2_comments(api, textseg):
+    ''' Convert comments from a specific text segments in the IDB
+    '''
+
+    for ea in range(textseg, api.idc.SegEnd(textseg)):
+        try:
+            flags = api.ida_bytes.get_cmt(ea, True)
+            if flags != "":
+                outfile.write("CCu base64:" + base64.b64encode(flags.encode(
+                    encoding='UTF-8')).decode("utf-8") + " @ " + str(ea) + "\n")
+        except Exception as e:
+            try:
+                flags = api.ida_bytes.get_cmt(ea, False)
+                outfile.write("CCu base64:" + base64.b64encode(flags.encode(
+                    encoding='UTF-8')).decode("utf-8") + " @ " + str(ea) + "\n")
+            except:
+                pass
+
+
+def idb2r2_functions(api):
+    ''' Convert all functions from the IDB
+    '''
+
+    for ea in api.idautils.Functions():
+        outfile.write(
+            "af " + api.idc.GetFunctionName(ea).replace("@", "_") + " @ " + str(ea) + "\n")
+
+
+def idb_parse(args):
+    global outfile
+    with idb.from_file(args.idb_file) as db:
+        api = idb.IDAPython(db)
+        # Compatability check for those who install python-idb from pip
+        try:
+            baddr = hex(api.ida_nalt.get_imagebase())
+        except:
+            baddr = "[base address]"
+        outfile = open(args.out_file, 'w')
+
+        print("[+] Starting convertion from '%s' to '%s'" %
+                (args.idb_file, args.out_file))
+
+        if args.is_functions:
+            idb2r2_functions(api)
+
+        if args.is_comments:
+            segs = idb.analysis.Segments(db).segments
+            for segment in segs.values():
+                idb2r2_comments(api, segment.startEA)
+
+    print("[+] Convertion done.\n")
+    print("[!] Execute: r2 -i %s -B %s [program]\n" %
+            (args.out_file, baddr))
+
+#
+# End of IDB Parsing
+###
+
+
+# -------------------------------------------------------------------
+
+
+###
+# IDC Parsing
+#
 
 class Func(object):
 # FIXME: parse ftype into params and values
@@ -45,7 +185,7 @@ class Type(object):
 		self.name = name
 		self.members = members
 
-# -----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 functions = []
 llabels = []
@@ -54,7 +194,7 @@ structs = []
 enums = []
 types = []
 
-def functions_parse(idc):
+def idc_functions_parse(idc):
 
 	# MakeFunction (0XF3C99,0XF3CA8);
 	mkfun_re = re.compile("""
@@ -167,12 +307,12 @@ def functions_parse(idc):
 
 # ----------------------------------------------------------------------
 
-def enums_parse(idc):
+def idc_enums_parse(idc):
 	pass
 
 # ----------------------------------------------------------------------
 
-def structs_parse(idc):
+def idc_structs_parse(idc):
 	# id = AddStrucEx (-1, "struct_MTRR", 0);
 	mkstruct_re = re.compile("""
 		(?m)								# Multiline
@@ -209,7 +349,7 @@ def structs_parse(idc):
 
 # ----------------------------------------------------------------------
 
-def comments_parse(idc):
+def idc_comments_parse(idc):
 	# MakeComm (0XFED3D, "PCI class 0x600 - Host/PCI bridge");
 	mkcomm_re = re.compile("""
 		(?m)								# Multiline
@@ -238,37 +378,64 @@ def comments_parse(idc):
 
 #	print("af+ 0x%08lx %d %s" % (func.address, func.size, func.name))
 
-def generate_r2():
+def idc_generate_r2(out_file):
+	global outfile
+	outfile = open(out_file, 'w')
+
 	for f in functions :
 		if f.name != "unknown" :
-			print("af+ {0} {1} {2}".format(hex(f.address), f.size, f.name))
-			print("\"CCa {0} {1}\"".format(hex(f.address), f.ftype))
+			outfile.write("af+ {0} {1} {2}\n".format(hex(f.address), f.size, f.name))
+			outfile.write("\"CCa {0} {1}\"\n".format(hex(f.address), f.ftype))
 
 	for l in llabels :
 		if l.name != "unknown" :
 			for f in functions :
 				if (l.address > f.address) and (l.address < (f.address + f.size)) :
-					print("f. {0} @ {1}".format(l.name, hex(l.address)))
+					outfile.write("f. {0} @ {1}\n".format(l.name, hex(l.address)))
 
 	for c in comments :
 		if c.text != "" :
-			print("\"CCa {0} {1}\"".format(c.address, c.text))
+			outfile.write("\"CCa {0} {1}\"\n".format(c.address, c.text))
+    
+	outfile.seek(0,2)
+	if outfile.tell() == 0:
+		print("[-] Found nothing to convert :-(")
+		exit()
+
 
 # ----------------------------------------------------------------------
 
-def idc_parse(idc):
-	enums_parse(idc)
-	structs_parse(idc)
-	functions_parse(idc)
-	comments_parse(idc)
-	generate_r2()
+def idc_parse(args):
+	print("[+] Starting convertion from '%s' to '%s'" %
+		(args.idc_file, args.out_file))
+	idc_file = open(args.idc_file, "r")
+	idc = idc_file.read()
+	idc_enums_parse(idc)
+	idc_structs_parse(idc)
+	idc_functions_parse(idc)
+	idc_comments_parse(idc)
+	idc_generate_r2(args.out_file)
+	print("[+] Convertion done.\n")
+	print("[!] Execute: r2 -i %s [program]\n" %
+		(args.out_file))
+
+#
+# End of IDC Parsing
+###
+
+# ----------------------------------------------------------------------
+
+def main():
+    ''' Gets arguments from the user. Perform convertion of the chosen data from the IDB into a radare2 initialization script
+    '''
+    args = get_args()
+
+    if args.idb_file:
+        idb_parse(args)
+    elif args.idc_file:
+        idc_parse(args)
+
+
 
 if __name__ == "__main__":
-	if len(sys.argv) < 2:
-		print("Usage: idc2r.py input.idc > output.r2")
-		sys.exit(1)
-
-	#print(sys.argv[1])
-	idc_file = open(sys.argv[1], "r")
-	idc = idc_file.read()
-	idc_parse(idc)
+    main()

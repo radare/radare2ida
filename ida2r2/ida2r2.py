@@ -2,9 +2,9 @@
 
 """ Convert IDB and IDC from IDA into a radare2 script
 
-$ idb2r2.py -h
+$ ida2r2.py -h
 
-usage: idb2r2.py [-h] (-idb IDB_FILE | -idc IDC_FILE) -o OUT_FILE [-nc | -nf]
+usage: ida2r2.py [-h] (-idb IDB_FILE | -idc IDC_FILE) -o OUT_FILE [-nc | -nf]
 
 Export IDB or IDC from IDA into a radare2 initialization script
 

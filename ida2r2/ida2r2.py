@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-""" Export IDB from IDA into a radare2 script
+""" Convert IDB and IDC from IDA into a radare2 script
 
 $ idb2r2.py -h
 

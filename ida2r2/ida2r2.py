@@ -412,8 +412,10 @@ def idc_parse(args):
 	idc = idc_file.read()
 	idc_enums_parse(idc)
 	idc_structs_parse(idc)
-	idc_functions_parse(idc)
-	idc_comments_parse(idc)
+	if args.is_functions:
+		idc_functions_parse(idc)
+	if args.is_comments:
+		idc_comments_parse(idc)
 	idc_generate_r2(args.out_file)
 	print("[+] Convertion done.\n")
 	print("[!] Execute: r2 -i %s [program]\n" %

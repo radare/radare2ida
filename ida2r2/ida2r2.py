@@ -156,7 +156,7 @@ def idb_parse(args):
         outfile = open(args.out_file, 'w')
         write_header()
 
-        print("[+] Starting convertion from '%s' to '%s'" %
+        print("[+] Starting conversion from '%s' to '%s'" %
                 (args.idb_file, args.out_file))
 
         if args.is_functions:
@@ -171,7 +171,7 @@ def idb_parse(args):
             for segment in segs.values():
                 idb2r2_comments(api, segment.startEA)
 
-    print("[+] Convertion done.\n")
+    print("[+] Conversion done.\n")
     print("[!] Execute: r2 -i %s -B %s [program]\n" %
             (args.out_file, baddr))
 

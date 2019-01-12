@@ -18,7 +18,7 @@ optional arguments:
                         Export to a specified file path
   -nc, --no-comments    Don't convert comments
   -nf, --no-functions   Don't convert functions
-  -nn, --no-names   Don't convert names
+  -nn, --no-names       Don't convert names
 
 """
 

@@ -430,7 +430,7 @@ def idc_generate_r2(out_file):
 				addr=hex(f.address),
 				size=f.size,
 				name=f.name))
-			outfile.write("\"CCa {addr} {typ}\"\n".format(
+			outfile.write("\"CCa {addr} {type}\"\n".format(
 				addr=hex(f.address),
 				type=f.ftype))
 

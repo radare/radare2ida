@@ -1,3 +1,9 @@
+** DEPRECATED **
+
+** MOVED TO RADARE2EXTRAS **
+
+** DONT COMMIT IN THIS REPO **
+
 # radare2ida
 
 This repository contains a collection of documents, scripts
